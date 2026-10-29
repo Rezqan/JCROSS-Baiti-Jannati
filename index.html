@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JCross | بيتي جنتي</title>
+<style>
+:root{--blue:#1877d2;--navy:#14345b;--sky:#eaf6ff;--yellow:#ffe16b;--green:#16834a}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#e6f7ff,#fff8d9);color:#18324d}
+main{max-width:980px;margin:24px auto;padding:18px}.hero{background:linear-gradient(120deg,#0878cf,#48b6f5);color:white;border-radius:22px;padding:24px;text-align:center;box-shadow:0 8px 22px #1a578526}
+h1{margin:0 0 6px;font-size:clamp(24px,4vw,38px)}.arabic{font-family:"Traditional Arabic","Arial",sans-serif;font-size:1.35em;direction:rtl}
+.panel{background:white;border-radius:18px;padding:20px;margin-top:16px;box-shadow:0 5px 18px #14345b12}
+.top{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}.pill{background:#fff2b8;border-radius:999px;padding:8px 13px;font-weight:bold}
+.grid{display:grid;grid-template-columns:repeat(9,minmax(25px,42px));gap:3px;justify-content:center;margin:18px auto}.cell{aspect-ratio:1;border-radius:5px;background:#1b3554;display:flex;align-items:center;justify-content:center;position:relative}.cell.open{background:#fff;border:2px solid #91c9f0}.cell input{width:100%;height:100%;border:0;background:transparent;text-align:center;text-transform:uppercase;font-size:clamp(15px,2.5vw,22px);font-weight:bold;outline:none;color:#14345b;padding:0}.cell input:focus{background:#fff2b8}.cell .num{position:absolute;top:0;left:2px;font-size:9px;color:#42749c;pointer-events:none}
+.clues{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}.clues h2{font-size:19px;color:var(--blue)}.clue{display:flex;gap:9px;align-items:flex-start;margin:10px 0}.clue b{background:var(--sky);border-radius:7px;padding:5px 8px;color:var(--navy)}.clue button{border:0;background:transparent;text-align:left;font-size:15px;cursor:pointer;color:#18324d;line-height:1.4}.clue button:hover{text-decoration:underline;color:var(--blue)}
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}button.action{border:0;border-radius:10px;padding:11px 18px;background:var(--blue);color:#fff;font-weight:bold;cursor:pointer}button.secondary{background:#e9f2fb;color:#14345b}.feedback{text-align:center;font-weight:bold;min-height:25px;margin-top:12px}.note{font-size:13px;color:#58718a;text-align:center}
+@media(max-width:420px){main{padding:10px}.panel{padding:12px}.grid{gap:2px}.cell{border-radius:3px}}
+</style></head>
+<body><main>
+<header class="hero"><h1>🏡 RUMAHKU SYURGAKU</h1><div class="arabic">بَيْتِي جَنَّتِي</div><p>Permainan Silang Kata Bahasa Arab · Tahun 4</p></header>
+<section class="panel"><div class="top"><strong>🧩 Lengkapkan silang kata!</strong><span class="pill">Masa: <span id="time">09:00</span></span><span class="pill">Markah: <span id="score">0</span>%</span></div><p>Pilih nombor petak atau klik petunjuk. Taip jawapan dalam huruf Arab tanpa baris. Bagi perkataan yang terdiri daripada beberapa perkataan, tulis tanpa jarak.</p><div id="grid" class="grid" aria-label="Grid silang kata"></div>
+<div class="clues"><div><h2>➡️ Melintang</h2><div id="across"></div></div><div><h2>⬇️ Menegak</h2><div id="down"></div></div></div>
+<div class="actions"><button class="action" onclick="checkAnswers()">Semak Jawapan</button><button class="action secondary" onclick="hint()">Beri Satu Huruf</button><button class="action secondary" onclick="resetGame()">Mula Semula</button></div><div id="feedback" class="feedback" role="status"></div><p class="note">Tip: Gunakan papan kekunci Arab pada peranti anda. Jawapan dinilai berdasarkan huruf Arab.</p></section>
+</main>
+<script>
+const entries=[
+ {n:1,d:'across',r:2,c:0,a:'غرفةالنوم',q:'Bahagian rumah yang digunakan untuk tidur.'},
+ {n:2,d:'down',r:0,c:6,a:'بيت',q:'Tempat tinggal manusia.'},
+ {n:3,d:'down',r:1,c:1,a:'سرير',q:'Tempat untuk berbaring.'},
+ {n:4,d:'down',r:1,c:4,a:'ساعة',q:'Alat yang mempunyai jarum dan nombor.'},
+ {n:5,d:'down',r:1,c:8,a:'حمام',q:'Tempat untuk mandi dan membersihkan diri.'},
+ {n:6,d:'down',r:2,c:10,a:'كنبة',q:'Tempat duduk yang selesa di ruang tamu.'},
+ {n:7,d:'across',r:4,c:8,a:'مطبخ',q:'Tempat untuk memasak.'}
+];
+// Render a clean interactive clue-based crossword grid. Each clue has a linked answer row to support Arabic typing.
+const gridEl=document.getElementById('grid');
+const rows=6, cols=12, active=new Set();
+entries.forEach(e=>{for(let i=0;i<e.a.length;i++){active.add(`${e.r+(e.d==='down'?i:0)},${e.c+(e.d==='across'?i:0)}`)}});
+const cells={};
+for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+ const key=`${r},${c}`, div=document.createElement('div');div.className='cell'+(active.has(key)?' open':'');
+ if(active.has(key)){const input=document.createElement('input');input.maxLength=1;input.autocomplete='off';input.setAttribute('aria-label',`Huruf baris ${r+1} lajur ${c+1}`);input.dataset.key=key;div.appendChild(input);cells[key]=input}
+ gridEl.appendChild(div)
+}
+function renderClues(dir,id){const box=document.getElementById(id);entries.filter(e=>e.d===dir).forEach(e=>{
+ const row=document.createElement('div');row.className='clue';const num=document.createElement('b');num.textContent=e.n;
+ const btn=document.createElement('button');btn.innerHTML=`${e.q}<br><span class="arabic">${e.a.length} huruf</span>`;btn.onclick=()=>{const input=document.querySelector(`[data-key="${e.r},${e.c}"]`);if(input)input.focus();document.getElementById('answer'+e.n).focus()};
+ const answer=document.createElement('input');answer.id='answer'+e.n;answer.placeholder='Taip jawapan Arab…';answer.dir='rtl';answer.autocomplete='off';answer.style='width:100%;min-width:0;padding:7px;border:1px solid #bdd7e9;border-radius:8px;font-size:18px';
+ answer.dataset.entry=e.n;answer.addEventListener('input',()=>updateScore());row.append(num);const content=document.createElement('div');content.style='flex:1;min-width:0';content.append(btn,answer);row.append(content);box.append(row)
+})}
+renderClues('across','across');renderClues('down','down');
+function normalized(s){return s.replace(/\s/g,'').replace(/[ًٌٍَُِّْـٰ]/g,'').trim()}
+function checkAnswers(){let correct=0;entries.forEach(e=>{const input=document.getElementById('answer'+e.n);const ok=normalized(input.value)===normalized(e.a);input.style.borderColor=ok?'#16834a':'#d34a4a';input.style.background=ok?'#edfff3':'#fff0f0';if(ok)correct++});const pct=Math.round(correct/entries.length*100);document.getElementById('score').textContent=pct;document.getElementById('feedback').textContent=correct===entries.length?'🎉 Tahniah! Semua jawapan betul!':`Anda betul ${correct} daripada ${entries.length} jawapan. Cuba lagi!`}
+function updateScore(){let n=0;entries.forEach(e=>{if(normalized(document.getElementById('answer'+e.n).value)===normalized(e.a))n++});document.getElementById('score').textContent=Math.round(n/entries.length*100)}
+function hint(){const e=entries.find(x=>normalized(document.getElementById('answer'+x.n).value)!==normalized(x.a));if(!e){document.getElementById('feedback').textContent='Semua jawapan sudah betul!';return}const input=document.getElementById('answer'+e.n);const current=Array.from(normalized(input.value));input.value=e.a.slice(0,current.length)+e.a.slice(current.length);input.focus();document.getElementById('feedback').textContent=`Klu untuk soalan ${e.n}: jawapan ialah ${e.a.length} huruf. Lihat bahan pembelajaran untuk bantuan.`}
+function resetGame(){entries.forEach(e=>{const i=document.getElementById('answer'+e.n);i.value='';i.style.borderColor='#bdd7e9';i.style.background='white'});document.getElementById('score').textContent='0';document.getElementById('feedback').textContent='';}
+let seconds=540;setInterval(()=>{if(seconds<=0)return;seconds--;document.getElementById('time')?.replaceChildren(document.createTextNode(String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0')))},1000);
+</script></body></html>
